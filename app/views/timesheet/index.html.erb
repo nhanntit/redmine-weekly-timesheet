@@ -1,0 +1,41 @@
+<% if User.current.to_s != "Anonymous" %>
+  <div id='logtime_list'><%= render :partial => "grid", :locals => {:query => @timesheet_query} %></div>
+  <fieldset>
+    <legend><u><b>Instruction</b></u></legend>
+    <table width="100%" border="0">
+      <tr>
+        <td valign="top">
+          <p><b>Timesheet Guide</b></p>
+          <br/>* To add issues, move to [Issues] tab -> tick issues to be added (leftmost checkbox) -> right click ->
+          Add to timesheet -> select week (see picture)
+          <br/>
+          * Rules:
+          <ul>
+            <li>You cannot log time for the future</li>
+            <li>You cannot remove issue from week once you have logged time for that week. To remove issue, please
+              click "Time Logged Detail" link to remove logged records first.
+            </li>
+            <li>Issue will be added automatically when user logs time by redmine logtime feature</li>
+          </ul>
+          <p><b>Effort Plan Guide</b></p>
+          <ul>
+            <li>Turn on by checkbox "Show Effort Plan"</li>
+            <br><%= image_tag 'show_effort.jpg', :plugin => 'weekly_timesheet' %>
+            <li>Click on left corner number (see picture below) to edit planed effort and detail activities for a
+              specific issue in a day
+            </li>
+            <br><%= image_tag 'edit_planed_effort.jpg', :plugin => 'weekly_timesheet' %>
+            <li>Drag the mouse on the left cornor number to see the detail activities (picture)</li>
+            <br><%= image_tag 'detail_activities.jpg', :plugin => 'weekly_timesheet' %>
+          </ul>
+        </td>
+        <td valign="top">
+          <%= image_tag 'timesheet.JPG', :plugin => 'weekly_timesheet' %>
+        </td>
+      </tr>
+    </table>
+
+  </fieldset>
+<% else %>
+  <h4>Please signin to use this function</h4>
+<% end %>

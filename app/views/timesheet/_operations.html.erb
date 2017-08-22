@@ -1,0 +1,77 @@
+<% if @timesheet_user.id == User.current.id %>
+    <div id="tools">
+      <fieldset id="Tools">
+        <legend><b><u><%= l(:label_tool) %></u></b></legend>
+        <table width="100%">
+
+          <tr>
+            <td>
+              <%= l(:label_goto) %>
+              :&nbsp;<input id="goto" title="yyyy-ww or ww" type="text" size="10" name="goto"/>
+              <a class="icon icon-checked" id="go" onclick="
+              if (validateDate('goto')) {
+                      $.ajax({
+                              url: '<%= url_for(:action => 'goto', :user_id => @user_id) %>',
+                              type: 'GET',
+                              data: $('#tools :input').serialize(),
+                              success: function (response) { $('#logtime_list').html(response); },
+                              failure: function (msg) { $('#logtime_list').html(msg); }
+                              });
+                      return false;
+                      } else
+                      return false;
+              " href="#"><%= l(:button_apply) %></a>
+              <input id="current_time" type="hidden" value='<%= @current_time %>' name="current_time"/>
+              <input id="mode" type="hidden" value="<%= @mode %>" name="mode"/>
+            </td>
+            <td>
+              <%= l(:label_copy_from) %>
+              :&nbsp;<input id="copyfrom" title="yyyy-ww or ww" type="text" size="10" name="copyfrom"/>
+              <a class="icon icon-checked" id="copyfrom" onclick="
+              if (validateDate('copyfrom')) {
+                      $.ajax({
+                              url: '<%= url_for(:action => 'copyfrom', :user_id => @user_id) %>',
+                              type: 'POST',
+                              data: $('#tools :input').serialize(),
+                              success: function (response) { $('#logtime_list').html(response); },
+                              failure: function (msg) { $('#logtime_list').html(msg); }
+                              });
+                      return false;
+                      } else
+                      return false;
+              " href="#"><%= l(:button_copy) %></a>
+            </td>
+            <td>
+              <%= l(:label_copy_to) %>
+              :&nbsp;<input id="copyto" title="yyyy-ww or ww" type="text" size="10" name="copyto"/><%= calendar_timesheet_for("copyto") %>
+              <a class="icon icon-checked" id="copyto" onclick="
+              if (validateDate('copyto')) {
+                      $.ajax({
+                              url: '<%= url_for(:action => 'copyto', :user_id => @user_id) %>',
+                              type: 'POST',
+                              data: $('#tools :input').serialize(),
+                              success: function (response) { $('#logtime_list').html(response); },
+                              failure: function (msg) { $('#logtime_list').html(msg); }
+                              });
+                      return false;
+                      } else
+                      return false;
+              " href="#"><%= l(:button_copy) %></a>
+            </td>
+            <td align="right">
+              <input type="checkbox" name="cbmode" <%= @mode=="all" ? "checked='checked'" : "" %> id="cbmode"
+                     onclick="$.ajax({
+                             url: '<%= url_for(:action => 'changemode', :user_id => @user_id) %>',
+                             type: 'GET',
+                             data: $('#tools :input').serialize(),
+                             success: function (response) { $('#logtime_list').html(response); },
+                             failure: function (msg) { $('#logtime_list').html(msg); }
+                             });
+                             return false;"/>
+              <%= l(:label_show_effort_plan) %>
+            </td>
+          </tr>
+        </table>
+      </fieldset>
+    </div>
+<% end %>

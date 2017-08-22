@@ -1,0 +1,115 @@
+.odd_grid {
+	background-color: #e5f2ff;
+}
+
+.even_grid {
+	background-color: #f5faff;
+}
+
+.hascontextmenu {
+	cursor: context-menu;
+}
+
+/***** Popup LogTime *****/
+#timesheet_log_time td.labelLogTime {
+	width: 30%;
+}
+
+#timesheet_log_time .custom-field-input > * {
+	width: 200px;
+}
+
+/***** Timesheet *****/
+table.timesheet {
+	border-collapse: collapse;
+	width: 100%;
+	margin: 0px 0 6px 0;
+	border: 1px solid #d7d7d7;
+}
+
+table.timesheet thead th {
+	width: 14%;
+}
+
+table.timesheet th {
+	background-color: #EEEEEE;
+	padding: 4px;
+}
+
+table.timesheet td {
+	border: 1px solid #d7d7d7;
+	vertical-align: top;
+	font-size: 0.9em;
+}
+
+table.timesheet td p.day-num {
+	font-size: 1.1em;
+	text-align: right;
+}
+
+table.timesheet td.odd p.day-num {
+	color: #bbb;
+}
+
+table.timesheet td.today {
+	background: #ffffdd;
+}
+
+table.timesheet td.today p.day-num {
+	font-weight: bold;
+}
+
+table.list td {
+	vertical-align: text-bottom;;
+}
+
+.grid-hours {
+	font-size: 110%;
+	font-weight: bold;
+	color: #467aa7
+}
+
+.grid-hours span.hours-int {
+	font-size: 140%;
+}
+
+.grid-hours span.hours-dec {
+	font-size: 70%;
+}
+
+.plan-hours {
+	font-size: 90%;
+	font-weight: bold;
+	color: #BFBF55
+}
+
+.plan-hours span.hours-int {
+	font-size: 110%;
+}
+
+.plan-hours span.hours-dec {
+	font-size: 70%;
+}
+
+.plan-hours a:link {
+	color: #BFBF55;
+}
+
+.plan-hours a:visited {
+	color: #BFBF55;
+}
+
+.plan-hours a:hover {
+	color: #BFBF55;
+}
+
+.plan-hours a:active {
+	color: #BFBF55;
+}
+
+/*.pourcent {font-size: 80%; color:#ff7f27}*/
+
+a.export {
+	background: url(../images/feed.png) no-repeat 1px 50%;
+	padding: 2px 0px 3px 16px;
+}

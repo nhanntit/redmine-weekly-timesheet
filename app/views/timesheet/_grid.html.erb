@@ -1,0 +1,765 @@
+<script type="text/javascript">
+  function toggle_repeat_days(field) {
+    check_box = document.getElementById('cb_' + field);
+    if (check_box.checked)
+      document.getElementById('div_input_day').style.display = 'block';
+    else
+      document.getElementById('div_input_day').style.display = 'none';
+  }
+
+  function reset_repeat_box() {
+    document.getElementById('cb_repeat_status_id').checked = '';
+    document.getElementById('operators_repeat_status_id').value = '';
+    document.getElementById('div_input_day').style.display = 'none';
+  }
+</script>
+
+
+<%
+   @user_id = User.current.id if @user_id.blank?
+   @current_time = Date.today if @current_time.blank?
+   year = (@current_time + 4 - (@current_time.wday == 0 ? 7 : @current_time.wday)).year # http://stackoverflow.com/questions/6117814/get-week-of-year-in-javascript-like-in-php
+   while @current_time.wday != 1
+     @current_time -= 1 #move to the previous day
+   end
+   @current_week = Date.civil(@current_time.year, @current_time.month, @current_time.day).cweek
+   @next_week = @current_time + 7
+   @prev_week = @current_time - 7
+   time_pattern = @current_time.strftime("%Y-%m-%d")
+%>
+<h2><%= l(:label_week_timesheet) %>&nbsp;<%= @current_week %>&nbsp;-&nbsp;<%= year %> <%= l(:label_title_timesheet) %> &nbsp;-&nbsp;
+  <span style="color: #bd4208"><%= @timesheet_user.name %></span>
+</h2>
+<% if flash[:notice] != nil %>
+  <table width="100%" bgcolor=#dfffdf bordercolor=#9fcf9f border="1" cellpadding=0 cellspacing=0>
+    <tr>
+      <td>
+        <%= l(:label_note_DT) %>:&nbsp;<%= flash[:notice].blank? ? "" : flash[:notice].html_safe %><%= flash[:error].blank? ? "" : flash[:error].html_safe %>
+      </td>
+    </tr>
+  </table>
+<% end %>
+<% if @message != nil %>
+  <table width="100%" bgcolor=#dfffdf bordercolor=#9fcf9f border="1" cellpadding=0 cellspacing=0>
+    <tr>
+      <td>
+        <%= l(:label_note_DT) %>:&nbsp;<%= @message.blank? ? "" : @message.html_safe %><%= flash[:error].blank? ? "" : flash[:error].html_safe %>
+      </td>
+    </tr>
+  </table>
+<% end %>
+
+<div id="popupLogtime" style="position:absolute;display:none;width:30%;"></div>
+<%= render :partial => "plan_time" %>
+<%= render :partial => "select_week" %>
+
+<!-- new -->
+<%= form_tag(url_for(:controller => 'timesheet', :action => 'load_user_timesheet', :user_id => @user_id, :mode => @mode, :current_time => @current_time ), :id => 'timesheet_query_form', :autocomplete => "off") do %>
+  <%= hidden_field_tag :new_timesheet_query , :true%>
+  <div id="timesheet_query_form_content" class="hide-when-print">
+    <fieldset id="monitoring" class = "collapsible "><legend onclick = "toggleFieldset(this);"><%= l(:label_filter_plural) %></legend>
+      <div style="overflow: visible;">
+        <!--<%= render :partial =>  "timesheet_query/filters", :locals => {:query => query} %>-->
+      </div>
+    </fieldset>
+  </div>
+  <p class="buttons hide-when-print">
+    <a class="icon icon-checked" onclick="
+    $.ajax({
+        url: '<%= url_for(:action => 'load_user_timesheet', :user_id => @user_id, :mode => @mode, :current_time => @current_time) %>',
+        type: 'POST',
+        data: $('#timesheet_query_form').serialize(),
+        success: function (response) { $('#logtime_list').html(response); },
+        failure: function (msg) { $('#logtime_list').html(msg); },
+        complete: function () { apply_filters_observer(); }
+        });
+        return false;
+    " href="#"><%= l(:button_apply) %></a>
+
+    <a class="icon icon-reload" onclick="
+    $.ajax({
+        url: '<%= url_for(:action => 'load_user_timesheet', :user_id => @user_id, :mode => @mode, :current_time => @current_time, :reset_query => true) %>',
+        type: 'POST',
+        data: $('#timesheet_query_form').serialize(),
+        success: function (response) { $('#logtime_list').html(response); },
+        failure: function (msg) { $('#logtime_list').html(msg); },
+        complete: function () { apply_filters_observer(); }
+        });
+        return false;
+    " href="#"><%= l(:button_reset) %></a>
+  </p>
+<%end%>
+<% unless @timesheet_query.valid?  %>
+  <%= l(:error_template, :message => @timesheet_query.error).html_safe %>
+<% end %>
+<!-- new -->
+
+<!-- old --
+<% if @monitoring_members.length > 1 %>
+  <div id="monitoring">
+    <fieldset id="monitoring">
+      <legend><b><u><%= l(:label_filter_plural) %></u></b></legend>
+      <table width="100%">
+        <tr>
+          <td><%= l(:label_member) %>:&nbsp;
+            <%= select :member, :id, @monitoring_members.collect { |mb| [mb[:name], mb[:id]] }, :selected => @timesheet_user.id.to_s %>
+            <a class="icon icon-checked" id="load_user_timesheet" onclick="
+            $.ajax({
+                url: '<%= url_for(:action => 'load_user_timesheet', :user_id => @user_id,
+		                              :mode => @mode, :current_time => @current_time) %>',
+                type: 'POST',
+                data: $('#monitoring :input').serialize(),
+                success: function (response) { $('#logtime_list').html(response); },
+                failure: function (msg) { $('#logtime_list').html(msg); }
+                });
+                return false;
+            " href="#"><%= l(:button_apply) %></a>
+          </td>
+        </tr>
+      </table>
+    </fieldset>
+  </div>
+<% end %>
+<!-- old -->
+
+<%= render :partial => "operations" %>
+
+<table width="100%">
+  <tr>
+    <td align="right">
+      <div style="float:right; margin:0px;">
+        <span><%= link_to 'CSV', {:action => 'export_to_csv', :current_time => @current_time}, :class => 'export' %></span>
+        |
+        <a href='javascript:void(0)' onclick="
+        $.ajax({
+            url: '<%= url_for(:action => 'select_week', :user_id => @user_id, :mode => @mode, :current_time => @prev_week) %>',
+            type: 'GET',
+            success: function (response) { $('#logtime_list').html(response); },
+            failure: function (msg) { $('#logtime_list').html(msg); }
+            });
+            return false;
+        ">
+          <%= "<< #{l(:label_week)} #{Date.civil(@prev_week.year, @prev_week.month, @prev_week.day).cweek}" %>
+        </a>
+        |
+        <%= " #{l(:label_week)} #{@current_week} " %>
+        |
+        <a href='javascript:void(0)' onclick="
+        $.ajax({
+            url: '<%= url_for(:action => 'select_week', :user_id => @user_id, :mode => @mode, :current_time => @next_week) %>',
+            type: 'GET',
+            success: function (response) { $('#logtime_list').html(response); },
+            failure: function (msg) { $('#logtime_list').html(msg); }
+            });
+            return false;
+        ">
+          <%= "#{l(:label_week)} #{Date.civil(@next_week.year, @next_week.month, @next_week.day).cweek} >>" %>
+        </a>
+      </div>
+    </td>
+  </tr>
+</table>
+
+
+<% j=0 %>
+<%= form_tag({}) do %>
+  <%= hidden_field_tag 'back_url', url_for(params) %>
+  <input id="ct" type="hidden" value="<%= @current_time %>" name="ct"/>
+  <input id="cmode" type="hidden" value="<%= @mode %>" name="cmode"/>
+  <% if @mode == "all" %>
+    <table style="border-collapse: collapse; width: 100%; margin: 0px 0 6px 0;border: 1px solid #d7d7d7;" cellpadding=0 cellspacing=0 class="-list issues">
+    <thead>
+    <tr>
+      <% if @timesheet_user.id == User.current.id %>
+        <td align="center" style='width:1%; vertical-align: middle;border: 1px solid #d7d7d7;' class="checkbox hide-when-print">
+          <%= link_to image_tag('toggle_check.png'), 'javascript:void(0)',
+                      :onclick => 'toggleIssuesSelection(this); return false;',
+                      :title => "#{l(:button_check_all)}/#{l(:button_uncheck_all)}" %>
+        </td>
+      <% end %>
+      <td style='width:4%;border: 1px solid #d7d7d7; vertical-align: middle;' align="center">
+        <b>#</b>
+      </td>
+      <td style='width:23%;font-size: 0.9em;border: 1px solid #d7d7d7; vertical-align: middle;' align="center">
+        <b><%= l(:label_issue) %></b>
+      </td>
+      <td style='width:8%;font-size: 0.9em;border: 1px solid #d7d7d7; vertical-align: middle;' align="center">
+        <b><%= l(:field_due_date) %></b>
+      </td>
+      <% 7.times do |i| %>
+        <th style='width:8%;background-color:#EEEEEE; padding: 4px;'>
+          <%= @current_time.strftime("%a <br/> %m /%d").html_safe %>
+          <% @current_time += 1 %>
+        </th>
+      <% end %>
+      <td style='width:8%;border: 1px solid #d7d7d7; vertical-align: middle;' align="center">
+        <b><%= l(:label_total) %></b>
+      </td>
+      <td style='width:1%;border: 1px solid #d7d7d7; vertical-align: top;' align="center">
+        &nbsp;
+      </td>
+    </tr>
+    </thead>
+    <%
+       @vtotal_sun = @vtotal_mon = @vtotal_tue = @vtotal_wed = @vtotal_thu = @vtotal_fri = @vtotal_sat = 0
+       @vtotal_plan_sun = @vtotal_plan_mon = @vtotal_plan_tue = @vtotal_plan_wed = @vtotal_plan_thu = @vtotal_plan_fri = @vtotal_plan_sat = 0
+       @selected_issues.each do |issue|
+         @htotal = 0
+         @htotal_plan = 0
+         j += 1
+         @current_time -= 7
+         @efforts = Hash.new
+         @efforts = efforts_plan_on(issue, @user_id, @current_time)
+         time_pattern = @current_time.strftime("%Y-%m-%d") -%>
+      <% if issue %>
+        <tr id="issue-<%= issue.id %>" class="hascontextmenu  ">
+        <% if @timesheet_user.id == User.current.id %>
+          <td class="id" style="border: 1px solid #d7d7d7 ; vertical-align: middle;" class="checkbox hide-when-print">
+            <%= check_box_tag("ids[]", issue.id, false, :id => nil) %></td>
+        <% end %>
+        <td style="border: 1px solid #d7d7d7; vertical-align: middle; font-size: 0.9em;<%if issue.closed? %> text-decoration: line-through
+          <% end %>">
+          <%= link_to issue.id, :controller => 'issues', :action => 'show', :id => issue.id %>
+        </td>
+        <td style="vertical-align: middle;border: 1px solid #d7d7d7; font-size: 0.9em; ">
+          <%= issue.project.name + " - " %>
+          <% title = "Subject: " + issue.subject.to_s + " \n" + "Estimated hours: " + issue.estimated_hours.to_s %>
+          <div id="tip_issue_<%= issue.id %>" class="box" style="position:absolute;display:none;width:24.5%;text-align:left;font-size:90%;font-style:normal;font-weight:400">
+            <div class="wiki" style="width:100%;"><%= textilizable(title) %></div>
+          </div>
+          <%= link_to issue.subject.length > 70 ? issue.subject[0, 70] + " ..." : issue.subject,
+                      {:controller => 'issues', :action => 'show', :id => issue.id},
+                      :id => "link_issue_#{issue.id}",
+                      :onmouseover => "showTip('link_issue_#{issue.id}','tip_issue_#{issue.id}');",
+                      :onmouseout => "hideTip('tip_issue_#{issue.id}');" %>
+        </td>
+        <td style="border: 1px solid #d7d7d7; vertical-align: middle;font-size: 0.9em;" align="center">
+          <%= issue.due_date %>
+        </td>
+        <%
+           7.times do |i|
+             hours_spent = hours_spent_on(issue, @user_id, Date.parse(time_pattern))
+             comments_log_time = get_time_entry(issue, @user_id, Date.parse(time_pattern))
+             activity_detail_on_log_time = ""
+             comments_log_time.each { |comment_log_time|
+               if (comment_log_time.comments.to_s != "")
+                 if (comment_log_time.comments.length >= 31)
+                   if (comment_log_time.comments.length % 30 != 0)
+                     lines = comment_log_time.comments.length/30 + 1
+                   else
+                     lines = comment_log_time.comments.length/30
+                   end
+                   temp =0
+                   activity_detail_on_log_time += " - "
+                   while temp < lines
+
+                     if (temp != lines - 1)
+                       activity_detail_on_log_time += comment_log_time.comments[(30*temp)..(30*(temp +1))-1].to_s + "\n"
+
+                     else
+                       activity_detail_on_log_time += comment_log_time.comments[(30*temp)..comment_log_time.comments.length].to_s
+                     end
+                     temp = temp + 1
+                   end
+                   activity_detail_on_log_time += " :"+ comment_log_time.hours.to_s + "h \n"
+                 else
+                   activity_detail_on_log_time += " - "+comment_log_time.comments.to_s + " : " + comment_log_time.hours.to_s + "h \n"
+                 end
+               else
+                 activity_detail_on_log_time += "- Unknown : " + comment_log_time.hours.to_s + "h \n"
+               end
+             }
+
+             effort_plan = @efforts[time_pattern.to_s]
+             plan_hours = 0
+             comment = ""
+             effort_plan_id = "notplanedyet"
+             if effort_plan
+               plan_hours = effort_plan.hour
+               comment = effort_plan.comment.to_s
+               comment1 = comment.gsub(13.chr+10.chr, "\\n")
+               comment1 = comment1.gsub('"', "&escape1")
+               comment1 = comment1.gsub("'", "&escape2")
+               comment1 = comment1.gsub(10.chr, "\\n")
+               comment1 = comment1.gsub(13.chr, "\\n")
+               comment1 = comment1.gsub(10.chr+13.chr, "\\n")
+               t = 0;
+               count = -1;
+               condition = false;
+               comment.each_char { |c|
+                 count +=1
+                 t += 1
+                 if (c == "#{10.chr}" || c == "#{13.chr}" || c == "#{13.chr+10.chr}" || c == "#{10.chr+13.chr}")
+                   t = 0;
+                 end
+                 if (t > 15)
+                   condition = true
+                 end
+                 if (condition == true && c == " ")
+                   comment[count] = "\n"
+                   condition = false
+                   t = 0;
+                 end
+               }
+               effort_plan_id = effort_plan.id
+             end
+        %>
+          <td class="<%# TODO = j % 2 == 0 ? 'even_grid' : 'odd_grid' %>" style="text-align:right; width:8%;vertical-align:top;border: 1px solid #d7d7d7;" nowrap="nowrap">
+            <table cellpadding=0 cellspacing=0 style="margin: 0px;width:100%;hight:100%;" border="0">
+              <tr>
+                <td align="left" valign="top" colspan=2>
+                  <%
+                     repeat_efforts = load_repeat_efforts(issue, @user_id, @current_time).join(",")
+                     current_day = @current_time.to_date
+                  %>
+                  <div id="tip-<%= effort_plan_id %>-<%= issue.id %>-<%= i %>" class="box" style="position:absolute;display:none;width:15%;">
+                    <div class="wiki" style="width:100%;"><%= textilizable "Activities: \n"+comment %></div>
+                  </div>
+                  <div id="link-<%= effort_plan_id %>-<%= issue.id %>-<%= i %>" class="plan-hours">
+                    <a href="#" style="color:#BFBF55" <%= plan_hours==0 ? "title='Click to plan'" : "" %>
+                       onmouseover="showTip('link-<%=effort_plan_id%>-<%=issue.id%>-<%=i%>','tip-<%=effort_plan_id%>-<%=issue.id%>-<%=i%>');"
+                       onmouseout="hideTip('tip-<%=effort_plan_id%>-<%=issue.id%>-<%=i%>');"
+                       onclick="showPopupPlantime('link-<%=effort_plan_id%>-<%=issue.id%>-<%=i%>', '<%=time_pattern%>','<%=issue.id %>',
+                           '<%=comment1%>', <%=plan_hours%>, '<%=effort_plan_id%>', 'tip-<%=effort_plan_id%>-<%=issue.id%>-<%=i%>');
+                           init_data('<%= repeat_efforts%>','<%= current_day%>');return false;">
+                      <%= html_hours("%.2f" % plan_hours) %>
+                    </a>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td id="percent" align='left'>
+                  <p class="pourcent" title="% done"><%= get_percent_done_per_date(issue, @current_time) %></p>
+                </td>
+                <td align="right" valign="bottom">
+                  <div class="grid-hours">
+                    <%
+                       if @current_time <= Date.today && User.current.id.to_i == @user_id.to_i
+                         tracker = issue.tracker.name == l(:label_tracker_peer_review_name) ? "Review" : @default_activity
+                    %>
+                      <div id="tip-time-log<%= issue.id %>-<%= i %>" class="box"
+                           style="position:absolute;display:none;width:24.5%;text-align:left;font-size:90%;font-style:normal;font-weight:400">
+                        <div class="wiki" style="width:100%;"><%= textilizable "Activities: \n"+activity_detail_on_log_time %></div>
+                      </div>
+                      <%= hours_spent <= 0 ? "-" : link_to(html_hours("%.2f" % hours_spent),
+                                                           issue_time_entries_path(issue) +
+                                                               "?f[]=spent_on&op[spent_on]=><&v[spent_on][]=#{@current_time}&v[spent_on][]=#{@current_time}",
+                                                           :id => "link-time-log#{issue.id}-#{i}",
+                                                           :onmouseover => "showTip('link-time-log#{issue.id}-#{i}','tip-time-log#{issue.id}-#{i}');",
+                                                           :onmouseout => "hideTip('tip-time-log#{issue.id}-#{i}');") %>
+                      <a href="#" title="<%= l(:label_tooltip_logtime_timesheet) %>" id='<%= issue.id %><%= time_pattern %>_<%= i %>'
+                         onclick="showPopupLogtime(this.id,'<%=time_pattern%>','<%=issue.id %>','<%=tracker%>',
+                             '<%= url_for action: :ajax_load_form_log_time %>', '<%= @mode %>','<%= @current_time %>');
+                             return false;">
+                        <%= image_tag('time.png', :title => "#{l(:label_tooltip_logtime_timesheet)}") %>
+                      </a>
+                    <% else %>
+                      <div id="tip-time-log<%= issue.id %>-<%= i %>" class="box"
+                           style="position:absolute;display:none;width:24.5%;text-align:left;font-size:90%;font-style:normal;font-weight:400">
+                        <div class="wiki" style="width:100%;"><%= textilizable "Activities: \n"+activity_detail_on_log_time %></div>
+                      </div>
+                      <%= hours_spent <= 0 ? "-" : link_to(html_hours("%.2f" % hours_spent),
+                                                           issue_time_entries_path(issue) +
+                                                               "?f[]=spent_on&op[spent_on]=><&v[spent_on][]=#{@current_time}&v[spent_on][]=#{@current_time}",
+                                                           :id => "link-time-log#{issue.id}-#{i}",
+                                                           :onmouseover => "showTip('link-time-log#{issue.id}-#{i}','tip-time-log#{issue.id}-#{i}');",
+                                                           :onmouseout => "hideTip('tip-time-log#{issue.id}-#{i}');") %>
+                      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                    <% end %>
+                  </div>
+                  <%
+                     @htotal += hours_spent
+                     @htotal_plan += plan_hours
+                     case i
+                       when 0 then
+                         @vtotal_sun += hours_spent
+                         @vtotal_plan_sun += plan_hours
+                       when 1 then
+                         @vtotal_mon += hours_spent
+                         @vtotal_plan_mon += plan_hours
+                       when 2 then
+                         @vtotal_tue += hours_spent
+                         @vtotal_plan_tue += plan_hours
+                       when 3 then
+                         @vtotal_wed += hours_spent
+                         @vtotal_plan_wed += plan_hours
+                       when 4 then
+                         @vtotal_thu += hours_spent
+                         @vtotal_plan_thu += plan_hours
+                       when 5 then
+                         @vtotal_fri += hours_spent
+                         @vtotal_plan_fri += plan_hours
+                       when 6 then
+                         @vtotal_sat += hours_spent
+                         @vtotal_plan_sat += plan_hours
+                       else
+                         puts("date time error")
+                     end  #end case
+
+                     @current_time += 1
+                     time_pattern = @current_time.strftime("%Y-%m-%d")
+                  %>
+                </td>
+              </tr>
+            </table>
+          </td>
+        <% end %>
+        <td class="spent-hours" style="border: 1px solid #d7d7d7; font-size: 0.9em;">
+          <table cellpadding=0 cellspacing=0 style="margin: 0px;width:100%;hight:100%" border=0>
+            <tr>
+              <td align="left" valign="top" colspan=2>
+                <div class="plan-hours"><%= html_hours("%.2f" % @htotal_plan) %></div>
+              </td>
+            </tr>
+            <tr>
+              <td align="right" valign="bottom" colspan=2>
+                <div class="grid-hours">
+                  <%= @htotal <= 0 ? "-" : link_to(html_hours("%.2f" % @htotal), issue_time_entries_path(issue) +
+                      "?f[]=spent_on&op[spent_on]=><&v[spent_on][]=#{@current_time-7}&v[spent_on][]=#{@current_time-1}",
+                                                   :title => "#{l(:label_tooltip_time_logged_detail)}") %>
+                  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                </div>
+              </td>
+            </tr>
+          </table>
+        </td>
+        <td style="border: 1px solid #d7d7d7; vertical-align: middle; font-size: 0.9em;">
+          <% if User.current.id.to_i == @user_id.to_i %>
+            <% if @htotal > 0 %>
+              <a onclick='CannotRemoveAlert(); return false;' href='javascript:void(0)'>
+                <%= image_tag('delete.png', :title => l(:label_tooltip_delete_timesheet)) %>
+              </a>
+            <% else %>
+              <a href='javascript:void(0)' onclick="
+              $.ajax({
+                  url: '<%= url_for(:action => 'remove', :user_id => @user_id, :issue_id => issue.id,
+                                    :mode => @mode, :current_time => @current_time - 1) %>',
+                  type: 'POST',
+                  success: function (response) { $('#logtime_list').html(response); },
+                  failure: function (msg) { $('#logtime_list').html(msg); }
+                  });
+                  return false;
+              ">
+                <%= image_tag('delete.png', :title => l(:label_tooltip_delete_timesheet)) %>
+              </a>
+            <% end %>
+          <% end %>
+        </td>
+        </tr>
+      <% end
+         end
+      %>
+    <tr>
+      <td nowrap="nowrap" colspan="<%= @timesheet_user.id == User.current.id ? 4 : 3 %>" align="right"
+          style="border: 1px solid #d7d7d7; vertical-align: middle; font-size: 0.9em;">
+        <b><%= l(:label_total) %>&nbsp;</b>
+      </td>
+      <td style="text-align:right; width:6%;vertical-align:middle;border: 1px solid #d7d7d7;" nowrap="nowrap">
+        <table cellpadding=0 cellspacing=0 style="margin: 0px;width:100%;hight:100%" border=0>
+          <tr>
+            <td align="left" valign="top" colspan=2>
+              <div class="plan-hours"><%= html_hours("%.2f" % @vtotal_plan_sun) %></div>
+            </td>
+          </tr>
+          <tr>
+            <td align="right" valign="bottom" colspan=2>
+              <div class="grid-hours"><%= @vtotal_sun > 0 ? html_hours("%.2f" % @vtotal_sun) : "-" %>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</div>
+            </td>
+          </tr>
+        </table>
+      </td>
+      <td style="text-align:right; width:6%;vertical-align:middle;border: 1px solid #d7d7d7;" nowrap="nowrap">
+        <table cellpadding=0 cellspacing=0 style="margin: 0px;width:100%;hight:100%" border=0>
+          <tr>
+            <td align="left" valign="top" colspan=2>
+              <div class="plan-hours"><%= html_hours("%.2f" % @vtotal_plan_mon) %></div>
+            </td>
+          </tr>
+          <tr>
+            <td align="right" valign="bottom" colspan=2>
+              <div class="grid-hours"><%= @vtotal_mon > 0 ? html_hours("%.2f" % @vtotal_mon) : "-" %>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</div>
+            </td>
+          </tr>
+        </table>
+      </td>
+      <td style="text-align:right; width:6%;vertical-align:middle;border: 1px solid #d7d7d7;" nowrap="nowrap">
+        <table cellpadding=0 cellspacing=0 style="margin: 0px;width:100%;hight:100%" border=0>
+          <tr>
+            <td align="left" valign="top" colspan=2>
+              <div class="plan-hours"><%= html_hours("%.2f" % @vtotal_plan_tue) %></div>
+            </td>
+          </tr>
+          <tr>
+            <td align="right" valign="bottom" colspan=2>
+              <div class="grid-hours"><%= @vtotal_tue > 0 ? html_hours("%.2f" % @vtotal_tue) : "-" %>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</div>
+            </td>
+          </tr>
+        </table>
+      </td>
+      <td style="text-align:right; width:6%;vertical-align:middle;border: 1px solid #d7d7d7;" nowrap="nowrap">
+        <table cellpadding=0 cellspacing=0 style="margin: 0px;width:100%;hight:100%" border=0>
+          <tr>
+            <td align="left" valign="top" colspan=2>
+              <div class="plan-hours"><%= html_hours("%.2f" % @vtotal_plan_wed) %></div>
+            </td>
+          </tr>
+          <tr>
+            <td align="right" valign="bottom" colspan=2>
+              <div class="grid-hours"><%= @vtotal_wed > 0 ? html_hours("%.2f" % @vtotal_wed) : "-" %>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</div>
+            </td>
+          </tr>
+        </table>
+      </td>
+      <td style="text-align:right; width:6%;vertical-align:middle;border: 1px solid #d7d7d7;" nowrap="nowrap">
+        <table cellpadding=0 cellspacing=0 style="margin: 0px;width:100%;hight:100%" border=0>
+          <tr>
+            <td align="left" valign="top" colspan=2>
+              <div class="plan-hours"><%= html_hours("%.2f" % @vtotal_plan_thu) %></div>
+            </td>
+          </tr>
+          <tr>
+            <td align="right" valign="bottom" colspan=2>
+              <div class="grid-hours"><%= @vtotal_thu > 0 ? html_hours("%.2f" % @vtotal_thu) : "-" %>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</div>
+            </td>
+          </tr>
+        </table>
+      </td>
+      <td style="text-align:right; width:6%;vertical-align:middle;border: 1px solid #d7d7d7;" nowrap="nowrap">
+        <table cellpadding=0 cellspacing=0 style="margin: 0px;width:100%;hight:100%" border=0>
+          <tr>
+            <td align="left" valign="top" colspan=2>
+              <div class="plan-hours"><%= html_hours("%.2f" % @vtotal_plan_fri) %></div>
+            </td>
+          </tr>
+          <tr>
+            <td align="right" valign="bottom" colspan=2>
+              <div class="grid-hours"><%= @vtotal_fri > 0 ? html_hours("%.2f" % @vtotal_fri) : "-" %>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</div>
+            </td>
+          </tr>
+        </table>
+      </td>
+      <td style="text-align:right; width:6%;vertical-align:middle;border: 1px solid #d7d7d7;" nowrap="nowrap">
+        <table cellpadding=0 cellspacing=0 style="margin: 0px;width:100%;hight:100%" border=0>
+          <tr>
+            <td align="left" valign="top" colspan=2>
+              <div class="plan-hours"><%= html_hours("%.2f" % @vtotal_plan_sat) %></div>
+            </td>
+          </tr>
+          <tr>
+            <td align="right" valign="bottom" colspan=2>
+              <div class="grid-hours"><%= @vtotal_sat > 0 ? html_hours("%.2f" % @vtotal_sat) : "-" %>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</div>
+            </td>
+          </tr>
+        </table>
+      </td>
+      <td align="right" style="vertical-align:middle;border: 1px solid #d7d7d7;">
+        <table cellpadding=0 cellspacing=0 style="margin: 0px;width:100%;hight:100%" border=0>
+          <tr>
+            <td align="left" valign="top" colspan=2>
+              <div class="plan-hours"><%= html_hours("%.2f" % (@vtotal_plan_sun + @vtotal_plan_mon + @vtotal_plan_tue +
+                  @vtotal_plan_wed + @vtotal_plan_thu + @vtotal_plan_fri + @vtotal_plan_sat)) %></div>
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td align="right" valign="bottom" colspan=2>
+              <div class="grid-hours"><%= @vtotal_sun + @vtotal_mon + @vtotal_tue + @vtotal_wed + @vtotal_thu + @vtotal_fri + @vtotal_sat > 0 ?
+                                              html_hours("%.2f" % (@vtotal_sun + @vtotal_mon + @vtotal_tue + @vtotal_wed + @vtotal_thu + @vtotal_fri + @vtotal_sat)) :
+                                              "-" %>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</div>
+            </td>
+          </tr>
+        </table>
+      </td>
+      <td>
+        &nbsp;
+      </td>
+    </tr>
+    </table>
+
+  <% else %><table style="border-collapse: collapse; width: 100%; margin: 0px 0 6px 0;border: 1px solid #d7d7d7;" cellpadding=0 cellspacing=0 class="list issues">
+    <thead>
+    <tr>
+      <% if @timesheet_user.id == User.current.id %>
+        <td align="center" style='width:1%; vertical-align: middle;border: 1px solid #d7d7d7;' class="checkbox hide-when-print">
+          <%= link_to image_tag('toggle_check.png'), 'javascript:void(0)',
+                      :onclick => 'toggleIssuesSelection(this); return false;',
+                      :title => "#{l(:button_check_all)}/#{l(:button_uncheck_all)}" %>
+        </td>
+      <% end %>
+      <td align="center" style='width:4%;font-size: 0.9em;vertical-align: middle;border: 1px solid #d7d7d7;'>
+        <b>#</b>
+      </td>
+      <td style='width:23%;font-size: 0.9em;vertical-align: middle;border: 1px solid #d7d7d7;' align="center">
+        <b><%= l(:label_issue) %></b>
+      </td>
+      <td style='width:8%;font-size: 0.9em;vertical-align: middle;border: 1px solid #d7d7d7;' align="center">
+        <b><%= l(:field_due_date) %></b>
+      </td>
+      <% 7.times do |i| %>
+        <th style='width:8%;border: 1px solid #d7d7d7;'>
+          <%= @current_time.strftime("%a <br/> %m /%d").html_safe %>
+          <% @current_time += 1 %>
+        </th>
+      <% end %>
+      <td style='width:8%;vertical-align: middle;border: 1px solid #d7d7d7;' align="center">
+        <b><%= l(:label_total) %></b>
+      </td>
+      <td style='width:1%;border: 1px solid #d7d7d7;' align="center">
+        &nbsp;
+      </td>
+    </tr>
+    </thead>
+    <%
+       @vtotal_sun = @vtotal_mon = @vtotal_tue = @vtotal_wed = @vtotal_thu = @vtotal_fri = @vtotal_sat = 0
+       @selected_issues.each do |issue|
+         @htotal = 0
+         j += 1
+         @current_time -= 7
+         time_pattern = @current_time.strftime("%Y-%m-%d") -%>
+      <% if issue %>
+        <tr id="issue-<%= issue.id %>" class="hascontextmenu  ">
+          <% if @timesheet_user.id == User.current.id %>
+            <td class="id" style="border: 1px solid #d7d7d7 ; vertical-align: middle;" class="checkbox hide-when-print">
+              <%= check_box_tag("ids[]", issue.id, false, :id => nil) %></td>
+          <% end %>
+          <td style="border: 1px solid #d7d7d7 ; vertical-align: middle;">
+            <%= link_to issue.id, :controller => 'issues', :action => 'show', :id => issue.id %>
+          </td>
+          <td style="valign:middle;border: 1px solid #d7d7d7;">
+            <%= issue.project.name + " - " %>
+            <%= link_to (issue.subject.length > 40 ? issue.subject[0, 40] + " ..." : issue.subject),
+                        {:controller => 'issues', :action => 'show', :id => issue.id}, :title => issue.subject %>
+          </td>
+          <td style="border: 1px solid #d7d7d7;" align="center">
+            <%= issue.due_date %>
+          </td>
+          <%
+             7.times do |i|
+               hours_spent = hours_spent_on(issue, @user_id, time_pattern)
+          %>
+            <td class="<%# TODO = j%2 == 0 ? 'even_grid' : 'odd_grid' %>"
+                style="text-align:right; width:8%;vertical-align:middle;border: 1px solid #d7d7d7;" nowrap="nowrap">
+              <div class="grid-hours">
+                <%
+                   if (@current_time.year <= Date.today.year) && (@current_time.yday <= Date.today.yday && User.current.id.to_i == @user_id.to_i)
+                     tracker = issue.tracker.name == l(:label_tracker_peer_review_name) ? "Review" : @default_activity
+                %>
+                  <%= hours_spent <= 0 ? "-" : link_to(html_hours("%.2f" % hours_spent),
+                                                       issue_time_entries_path(issue) +
+                                                           "?f[]=spent_on&op[spent_on]=><&v[spent_on][]=#{@current_time}&v[spent_on][]=#{@current_time}",
+                                                       :title => "#{l(:label_tooltip_time_logged_detail)}") %>
+                  <a href="#" title="<%= l(:label_tooltip_logtime_timesheet) %>" id='<%= issue.id %><%= time_pattern %>_<%= i %>'
+                     onclick="showPopupLogtime(this.id,'<%=time_pattern%>','<%=issue.id %>','<%=tracker%>',
+                         '<%= url_for action: :ajax_load_form_log_time %>', '<%= @mode %>','<%= @current_time %>');
+                         return false;">
+                    <%= image_tag('time.png', :title => "#{l(:label_tooltip_logtime_timesheet)}") %>
+                  </a>
+                <% else %>
+                  <%= hours_spent <= 0 ? "-" : link_to(html_hours("%.2f" % hours_spent),
+                                                       issue_time_entries_path(issue) +
+                                                           "?f[]=spent_on&op[spent_on]=><&v[spent_on][]=#{@current_time}&v[spent_on][]=#{@current_time}") %>
+                  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                <% end %>
+              </div>
+              <%
+                 @htotal += hours_spent
+                 case i
+                   when 0 then
+                     @vtotal_sun += hours_spent
+                   when 1 then
+                     @vtotal_mon += hours_spent
+                   when 2 then
+                     @vtotal_tue += hours_spent
+                   when 3 then
+                     @vtotal_wed += hours_spent
+                   when 4 then
+                     @vtotal_thu += hours_spent
+                   when 5 then
+                     @vtotal_fri += hours_spent
+                   when 6 then
+                     @vtotal_sat += hours_spent
+                   else
+                     puts("date time error")
+                 end  #end case
+
+                 @current_time += 1
+                 time_pattern = @current_time.strftime("%Y-%m-%d")
+              %>
+            </td>
+          <% end %>
+          <td class="spent-hours" align=right style="border: 1px solid #d7d7d7;">
+            <div class="grid-hours"><%= @htotal <= 0 ? "-" : link_to(html_hours("%.2f" % @htotal),
+                                                                     issue_time_entries_path(issue) +
+                                                                         "?f[]=spent_on&op[spent_on]=><&v[spent_on][]=#{@current_time-7}&v[spent_on][]=#{@current_time-1}",
+                                                                     :title => "#{l(:label_tooltip_time_logged_detail)}") %>
+              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+            </div>
+          </td>
+          <td style="border: 1px solid #d7d7d7;">
+            <% if User.current.id.to_i == @user_id.to_i %>
+              <% if @htotal > 0 %>
+                <a onclick='CannotRemoveAlert(); return false;' href='javascript:void(0)'>
+                  <%= image_tag('delete.png', :title => l(:label_tooltip_delete_timesheet)) %>
+                </a>
+              <% else %>
+                <a href='javascript:void(0)' onclick="
+                $.ajax({
+                    url: '<%= url_for(:action => 'remove', :user_id => @user_id, :issue_id => issue.id,
+                                    :mode => @mode, :current_time => @current_time - 1) %>',
+                    type: 'POST',
+                    success: function (response) { $('#logtime_list').html(response); },
+                    failure: function (msg) { $('#logtime_list').html(msg); }
+                    });
+                    return false;
+                ">
+                  <%= image_tag('delete.png', :title => l(:label_tooltip_delete_timesheet)) %>
+                </a>
+              <% end %>
+            <% end %>
+          </td>
+        </tr>
+      <% end #end "@selected_issue.each
+         end
+      %>
+    <tr>
+      <td nowrap="nowrap" colspan="<%= @timesheet_user.id == User.current.id ? 4 : 3 %>" align="right"
+          style="vertical-align:middle;border: 1px solid #d7d7d7;">
+        <b><%= l(:label_total) %>&nbsp;</b>
+      </td>
+      <td style="text-align:right; width:6%;vertical-align:middle;border: 1px solid #d7d7d7;" nowrap="nowrap">
+        <div class="grid-hours"><%= @vtotal_sun > 0 ? html_hours("%.2f" % @vtotal_sun) : "-" %>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</div>
+      </td>
+      <td style="text-align:right; width:6%;vertical-align:middle;border: 1px solid #d7d7d7;" nowrap="nowrap">
+        <div class="grid-hours"><%= @vtotal_mon > 0 ? html_hours("%.2f" % @vtotal_mon) : "-" %>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</div>
+      </td>
+      <td style="text-align:right; width:6%;vertical-align:middle;border: 1px solid #d7d7d7;" nowrap="nowrap">
+        <div class="grid-hours"><%= @vtotal_tue > 0 ? html_hours("%.2f" % @vtotal_tue) : "-" %>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</div>
+      </td>
+      <td style="text-align:right; width:6%;vertical-align:middle;border: 1px solid #d7d7d7;" nowrap="nowrap">
+        <div class="grid-hours"><%= @vtotal_wed > 0 ? html_hours("%.2f" % @vtotal_wed) : "-" %>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</div>
+      </td>
+      <td style="text-align:right; width:6%;vertical-align:middle;border: 1px solid #d7d7d7;" nowrap="nowrap">
+        <div class="grid-hours"><%= @vtotal_thu > 0 ? html_hours("%.2f" % @vtotal_thu) : "-" %>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</div>
+      </td>
+      <td style="text-align:right; width:6%;vertical-align:middle;border: 1px solid #d7d7d7;" nowrap="nowrap">
+        <div class="grid-hours"><%= @vtotal_fri > 0 ? html_hours("%.2f" % @vtotal_fri) : "-" %>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</div>
+      </td>
+      <td style="text-align:right; width:6%;vertical-align:middle;border: 1px solid #d7d7d7;" nowrap="nowrap">
+        <div class="grid-hours"><%= @vtotal_sat > 0 ? html_hours("%.2f" % @vtotal_sat) : "-" %>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</div>
+      </td>
+      <td align="right" style="vertical-align:middle;border: 1px solid #d7d7d7;">
+        <div class="grid-hours">
+          <%= (@vtotal_sun + @vtotal_mon + @vtotal_tue + @vtotal_wed + @vtotal_thu + @vtotal_fri + @vtotal_sat) <= 0 ? "-" :
+                  html_hours("%.2f" % (@vtotal_sun + @vtotal_mon + @vtotal_tue + @vtotal_wed + @vtotal_thu + @vtotal_fri + @vtotal_sat)) %>
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        </div>
+      </td>
+      <td>
+        &nbsp;
+      </td>
+    </tr>
+    </table>
+  <% end %>
+<% end %>
+
+<%= context_menu url_for(:controller => 'context_menu_tss', :action => 'issues', :mode=> @mode, :user_id => @user_id) %>

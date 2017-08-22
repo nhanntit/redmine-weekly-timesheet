@@ -1,0 +1,31 @@
+<% project_id = params[:project_id] %>
+<div id="popupChooseDate" style="position:absolute;display:none;width:20%;height:160px;border-width:0px">
+  <%= form_tag({:controller => 'timesheet', :action => 'add', :project_id => project_id}, :method => :post, :id => 'popupForm') do %>
+    <table cellspacing=0 cellpadding=0 border=0>
+      <thead>
+      <tr>
+        <td id='title' colspan="2" bgcolor="#e5e5aa" style="color: #003f6a;font-weight: bold">Select Week</td>
+      </tr>
+      </thead>
+      <tbody>
+      <tr>
+        <td colspan=2 bgcolor="#f5f5d4" style="color: #174a77; font-size: x-small;">Week format:[yyyy-ww]or[ww]</td>
+      </tr>
+      <tr>
+        <td bgcolor="#f5f5d4">
+          <input id="datetoadd" type="text" size="20" name="datetoadd" value="abc"/><%= calendar_timesheet_for("datetoadd") %>
+        </td>
+      </tr>
+      <tr>
+        <td width="287" bgcolor="#F5F5D4">
+          <input type="button" value="&nbsp;<%= l(:button_add) %>&nbsp;" onclick="if (validateDate('datetoadd')) {document.getElementById('popupForm').submit();} else return false;"/>
+          &nbsp;&nbsp;
+          <input type="hidden" id='ids' name="ids"/>
+          <input type="hidden" id='project_id' name="project_id"/>
+          <input type="button" name="Cancel" id="Cancel" value="Cancel" onclick="document.getElementById('popupChooseDate').style.display='none'"/>
+        </td>
+      </tr>
+      </tbody>
+    </table>
+  <% end %>
+</div>

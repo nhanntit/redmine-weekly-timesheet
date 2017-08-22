@@ -1,0 +1,28 @@
+<ul>
+  <%= call_hook(:view_issues_context_menu_start, {:issues => @issues, :can => @can, :back => @back }) %>
+
+  <%
+     mode = @mode
+     current_time = @current_time
+     project = @issues[0].project
+     ids_temp = (@issues.collect { |p| p.id }).join(',')
+     menu_item = "<a class = 'icon-copy' href='#' id='cmLink' onclick=\"showChooseDate_TS('topabc_TS','#{ids_temp}','#{project.id}','#{mode}','#{current_time}');return false;\">#{l(:button_copy)} </a>".html_safe
+  %>
+  <div id='topabc_TS'></div>
+  <li><%= menu_item %></li>
+  <li>
+    <% if @error_logged_time %>
+      <a class='icon-del' onclick='CannotRemoveAlert(); return false;' href='#'><%= l(:button_throw) %></a>
+    <% else %>
+      <%= context_menu_link l(:button_throw),
+                            {:controller => 'timesheet', :action => 'remove_cm',
+                             :ids => @issues.collect(&:id),
+                             :mode => @mode,
+                             :current_time => @current_time,
+                             :user_id => @user_id},
+                            :method => :post,
+                            :class => 'icon-del'
+      %>
+    <% end %>
+  </li>
+</ul>

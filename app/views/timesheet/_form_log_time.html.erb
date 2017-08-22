@@ -1,0 +1,73 @@
+<%= labelled_form_for :time_entry, @time_entry, :url => {} do |f| %>
+    <%= error_messages_for 'time_entry' %>
+    <div class="box">
+      <table id="timesheet_log_time" border=0 style="width:100%" cellpadding=0 cellspacing=0>
+        <tr>
+          <td class='labelLogTime'>
+            <b><%= l(:field_hours) %><span class="required"> *</span></b>
+          </td>
+          <td>
+            <input id="time_entry_hours" type="text" size="6" onblur="validateHours(this.id)" name="time_entry[hours]"/>
+          </td>
+        </tr>
+        <tr>
+          <td class='labelLogTime'>
+            <b><%= l(:field_activity) %><span class="required"> *</span></b>
+          </td>
+          <td>
+            <%= select :time_entry, :activity_id, (@activity_logtime_in_timesheet.collect { |p| [p.name, p.id] }) %>
+          </td>
+        </tr>
+        <tr>
+          <td class='labelLogTime'>
+            <b><%= l(:label_comment) %></b>
+          </td>
+          <td>
+            <input id="time_entry_comments" onblur="validateText(this.id)" type="text" style="width: 200px" size="100" name="time_entry[comments]"/>
+          </td>
+        </tr>
+        <% @time_entry.custom_field_values.each do |value| %>
+          <tr>
+            <td class='labelLogTime'>
+              <b><%= custom_field_label_tag :time_entry, value %></b>
+            </td>
+            <td class="custom-field-input">
+              <%= custom_field_tag :time_entry, value %>
+            </td>
+          </tr>
+        <% end %>
+        <tr>
+          <td colspan=2 align="right">
+            <%= call_hook(:view_timelog_edit_form_bottom, { :time_entry => @time_entry, :form => f }) %>
+          </td>
+        </tr>
+        <tr>
+          <td align="left" colspan=2>
+            <input type="button" value="&nbsp;<%= l(:button_save) %>&nbsp;" name="save_btn" onclick="
+            if (hoursvalid==true && textvalid==true) {
+                $.ajax({
+                    url: '<%= url_for(:action => 'logtime', :user_id => @user_id) %>',
+                    type: 'POST',
+                    data: $('#new_time_entry').serialize(),
+                    success: function (response) { $('#logtime_list').html(response); },
+                    failure: function (msg) { $('#logtime_list').html(msg); }
+                    });
+                return false;
+                } else if (textvalid){
+                alert('<%=l(:notice_hours_invalid)%>');
+                return false;
+                } else {
+                alert('Your comment is too long');
+                return false;
+                }"/>
+            <input type="button" name="Cancel" id="Cancel" value="<%= l(:button_cancel) %>" onclick="document.getElementById('popupLogtime').style.display='none'"/>
+          </td>
+        </tr>
+        <input id="current_time" type="hidden" value='<%= @current_time %>' name="current_time"/>
+        <input id="time_entry_spent_on" type="hidden" value='' name="time_entry[spent_on]"/>
+        <input id="time_entry_issue_id" type="hidden" value='' name="time_entry[issue_id]"/>
+        <input id="back_url" type="hidden" value="" name="back_url"/>
+        <input id="mode" type="hidden" value="<%= @mode %>" name="mode"/>
+      </table>
+    </div>
+<% end %>

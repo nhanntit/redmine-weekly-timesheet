@@ -1,0 +1,83 @@
+<div id="popupPlanTime" style="position:absolute;display:none;width:38%;">
+  <form method="post" id="planform">
+    <div class="box">
+      <table border=0 style="width:100%" cellpadding=0 cellspacing=0>
+        <tr>
+          <td align="right" width=15%>
+            <b><%= l(:field_hours) %>*</b>
+          </td>
+          <td width=10%>
+            <input id="plan_hours" type="text" size="6" onblur="validateHours(this.id);" name="plan_hours"/>
+
+          </td>
+
+          <td align="left" width=40%>
+            <div>
+              <input type="checkbox" value="repeat_status_id" onclick="toggle_repeat_days('repeat_status_id');" name="fields" id="cb_repeat_status_id">
+              <label for="cb_repeat_status_id" class="filter_right_label">Repeated in</label>
+            </div>
+          </td>
+
+          <td align="left" width=40%>
+            <div id="div_input_day" style="display:none;">
+              <input type="text" id="operators_repeat_status_id" class="select_field" name="operators_repeat_status_id" size="3" onblur="validateDays(this.id);"/>
+              <span id="days">&nbsp;day(s)</span>
+            </div>
+          </td>
+        </tr>
+        <tr>
+          <td align="right" valign="top" width='15%'>
+            <b><%= l(:label_activity) %></b>
+          </td>
+          <td colspan=3>
+            <textarea name="plan_comment" id="plan_comment" cols="30" onblur="validateText(this.id);" rows="3"></textarea>
+          </td>
+        </tr>
+
+        <tr>
+          <td align="left">
+
+            <input type="button" value="&nbsp;<%= l(:button_save) %>&nbsp;" name="save_btn"
+                   onclick="
+                   if (hoursvalid==true&&textvalid == true) {
+                           if (daysvalid == true) {
+                                   if (confirm_message()) {
+                                           $.ajax({
+                                                   url: '<%= url_for(:action => 'plantime', :user_id => @user_id) %>',
+                                                   type: 'POST',
+                                                   data: $('#planform').serialize(),
+                                                   success: function (response) { $('#logtime_list').html(response); },
+                                                   failure: function (msg) { $('#logtime_list').html(msg); }
+                                                   });
+                                           return false;
+                                           } else {
+                                           reset_repeat_box();
+                                           document.getElementById('popupPlanTime').style.display='none';
+                                           }
+                                   } else {
+                                   alert('The number of days is invalid');
+                                   return false;
+                                   }
+                           } else if (textvalid) {
+                           alert('<%=l(:notice_hours_invalid)%>');
+                           return false;
+                           } else {
+                           alert('Your comment is too long');
+                           return false;
+                           }
+                   "/>
+          </td>
+          <td colspan=3>
+            <input type="button" name="Cancel" id="Cancel" value="<%= l(:button_cancel) %>" onclick="document.getElementById('popupPlanTime').style.display='none'; reset_repeat_box();"/>
+          </td>
+        </tr>
+        <input id="current_time" type="hidden" value='<%= @current_time %>' name="current_time"/>
+        <input id="plan_on" type="hidden" value='' name="plan_on"/>
+        <input id="issue_id" type="hidden" value='' name="issue_id"/>
+        <input id="back_url" type="hidden" value="" name="back_url"/>
+        <input id="plan_id" type="hidden" value='' name="plan_id"/>
+        <input id="mode" type="hidden" value="<%= @mode %>" name="mode"/>
+      </table>
+    </div>
+  </form>
+</div>

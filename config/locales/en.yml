@@ -1,0 +1,41 @@
+en:
+  label_add_to_timesheet: Also add this issue to grid time sheet (If you don't check, this issue will not available in your grid time sheet)
+  label_tool: Operation
+  label_goto: Go to
+  label_copy_from: Copy the issues from
+  label_copy_to: Copy the issues to
+  label_add_to_time_sheet: Add To TimeSheet  
+  label_note_DT: Note
+  label_title_timesheet: Timesheet
+  label_show_effort_plan: Show effort plan
+  label_tooltip_time_logged_detail : Time logged detail
+  label_tooltip_delete_timesheet : Throw it out the week
+  label_tooltip_logtime_timesheet: Click to log time
+  label_year_timesheet: Year
+  label_week_timesheet: Week
+  label_menu_timesheet: My Timesheet
+  
+  notice_successful_add_to_timesheet: Successfully add to timesheet.
+  notice_logtime_successful: Log time successful
+  notice_logtime_unsuccessful: Log time unsuccessful
+  notice_plantime_successful: Plan time successful
+  notice_plantime_unsuccessful: Plan time unsuccessful
+  notice_remove_selected_issue_unsuccessful: Remove unsuccessful
+  notice_remove_selected_issue_successful: Remove successful
+  notice_copy_successful: Copy successful
+  notice_hours_invalid: Hours is invalid
+  button_throw: Throw it out
+  error_context_menu_tss: Error. Please reload timesheet.
+  error_issue_not_exist: The issue is not existed anymore. Please reload timesheet.
+
+  field_member: Member
+  field_subject: Subject
+  field_project: Project
+  button_reset: Reset
+
+  error_template: "<div class='errorExplanation' id='errorExplanation'><h2>1 error prohibited this post from being saved</h2><p>There were problems with the following fields:</p><ul><li>%{message}</li></ul></div>"
+  cannot_empty: " cannot be empty. "
+  member_cannot_empty: "Member cannot be empty."
+  project_cannot_empty: "Project cannot be empty."
+  error_date_invalid: " is not valid. "
+  must_be_greater_than: " must be greater than "
